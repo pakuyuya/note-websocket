@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="UTF=8">
+        <script>
+        "use strict";
+
+        const server_uri = "ws://localhost:8080/";
+        const script_path = "echo-protocol";
+        const buf_rows = 500;
+
+        function createSocket(param = {}) {
+            let sock;
+            try {
+                sock = new WebSocket(server_uri, script_path);
+            } catch (e) {
+                log(e);
+                return;
+            }
+
+            sock.onopen = param.onopen || undefined;
+            sock.onmessage = param.onmessage || undefined;
+            sock.onclose = param.onclose || undefined;
+            sock.onerror = param.onerror || ((ev) => { console.error(ev) });
+
+            return sock;
+        }
+
+        let ws = null;
+        let buf = [];
+
+        function connect() {
+            if (ws) {
+                log("ERROR! already connected!");
+                return;
+            }
+
+            ws = createSocket({
+                onopen : () => { log('connected socket') },
+                onclose : () => { log('close socket') },
+                onmessage : (event) => {
+                    if (event && event.data) {
+                        log(event.data);
+                    }
+                },
+            })
+        }
+
+        function log(text) {
+            let e = document.createElement("div");
+            e.innerText = text;
+
+            buf.push(e);
+            if (buf.length > buf_rows) {
+                buf.shift().remove();
+            }
+            byid("console").prependChild(e);
+        }
+
+        function ping() {
+            if (!ws) {
+                log("ERROR! has not connected!");
+                return;
+            }
+
+            ws.send('ping');
+        }
+
+        function closeSock() {
+            if (!ws) {
+                log("ERROR! has not connected!");
+                return;
+            }
+
+            ws.close();
+            ws = undefined;
+        }
+
+        let byid = (id) => document.getElementById(id);
+        Element.prototype.prependChild = function(el) { this.insertBefore(el, this.firstChild); }
+
+        </script>
+        <style>
+            body { padding:0; margin:0; height : 100%; }
+        </style>
+    </head>
+    <body >
+        <div id="command" style="height:10%; width:100%; padding:0; margin:0;">
+            <button type="button" onclick="connect()">connect</button>
+            <button type="button" onclick="ping()">pong</button>
+            <button type="button" onclick="closeSock()">close</button>
+        </div>
+        <div id="console" style="color:#ccc; background:#222; height:90%; width:100%; padding:0; margin:0; overflow:scroll"></div>
+    </body>
+</html>
